@@ -21,7 +21,7 @@ public class Main {
     private static final AtomicInteger ATOMIC_B = new AtomicInteger(0);
     private static final AtomicInteger ATOMIC_C = new AtomicInteger(0);
 
-    private static final int Quantity_Text = 10_000;
+    private static final int Quantity_Text = 100;
     private static final int lenght_Text = 100_000;
     private static String text = "abc";
 
@@ -43,77 +43,17 @@ public class Main {
         });
         threadAQueue.start();
 
-        Thread threadCountA = new Thread(() -> {
-            String textTake;
+        new Thread(() -> {
+            counterChar(a_Queue, 'a', ATOMIC_A, maxCountA);
+        }).start();
 
-            for (int i = 0; i < Quantity_Text; i++) {
-                try {
-                    textTake = a_Queue.take();
-                    for (int j = 0; j < textTake.length(); j++) {
-                        if (textTake.charAt(j) == 'a') {
-                            ATOMIC_A.incrementAndGet();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    return;
-                }
-                if (maxCountA < ATOMIC_A.get()) {
-                    maxCountA = ATOMIC_A.get();
-                    textMaxA = textTake;
-                }
-                ATOMIC_A.set(0);
-            }
-        });
-        threadCountA.start();
+        new Thread(() -> {
+            counterChar(b_Queue, 'b', ATOMIC_B, maxCountB);
+        }).start();
 
-        Thread threadCountB = new Thread(() -> {
-            String textTake;
-            for (int i = 0; i < Quantity_Text; i++) {
-                try {
-                    textTake = b_Queue.take();
-                    for (int j = 0; j < textTake.length(); j++) {
-                        if (textTake.charAt(j) == 'b') {
-                            ATOMIC_B.incrementAndGet();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    return;
-                }
-                if (maxCountB < ATOMIC_B.get()) {
-                    maxCountB = ATOMIC_B.get();
-                    textMaxB = textTake;
-                }
-                ATOMIC_B.set(0);
-            }
-        });
-        threadCountB.start();
-
-        Thread threadCountC = new Thread(() -> {
-            String textTake;
-            for (int i = 0; i < Quantity_Text; i++) {
-                try {
-                    textTake = c_Queue.take();
-                    for (int j = 0; j < textTake.length(); j++) {
-                        if (textTake.charAt(j) == 'c') {
-                            ATOMIC_C.incrementAndGet();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    return;
-                }
-                if (maxCountC < ATOMIC_C.get()) {
-                    maxCountC = ATOMIC_C.get();
-                    textMaxC = textTake;
-                }
-                ATOMIC_C.set(0);
-            }
-        });
-        threadCountC.start();
-
-        Thread.sleep(30);
-        System.out.println("Текст в котором максимально встречается 'а' = " + maxCountA + " раз" +
-                "\nТекст в котором максимально встречается 'b' = " + maxCountB + " раз" +
-                "\nТекст в котором максимально встречается 'c' = " + maxCountC + " раз");
+        new Thread(() -> {
+            counterChar(c_Queue, 'c', ATOMIC_C, maxCountC);
+        }).start();
 
     }
 
@@ -125,5 +65,28 @@ public class Main {
         }
         return text.toString();
     }
+
+    public static void counterChar(BlockingQueue<String> queue, char x, AtomicInteger atomic, int maxVolatileCount) {
+        String textMaxChar = null;
+        for (int i = 0; i < Quantity_Text; i++) {
+            try {
+                textMaxChar = queue.take();
+                for (int j = 0; j < textMaxChar.length(); j++) {
+                    if (textMaxChar.charAt(j) == x) {
+                        atomic.incrementAndGet();
+                    }
+                }
+            } catch (InterruptedException e) {
+                return;
+            }
+            if (maxVolatileCount < atomic.get()) {
+                maxVolatileCount = atomic.get();
+                textMaxC = textMaxChar;
+            }
+            atomic.set(0);
+        }
+        System.out.println(x + " - в тексте максимально встречается = " + maxVolatileCount);
+    }
 }
+
 
