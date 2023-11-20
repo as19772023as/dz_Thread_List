@@ -21,7 +21,7 @@ public class Main {
     private static final AtomicInteger ATOMIC_B = new AtomicInteger(0);
     private static final AtomicInteger ATOMIC_C = new AtomicInteger(0);
 
-    private static final int Quantity_Text = 100;
+    private static final int Quantity_Text = 10_000;
     private static final int lenght_Text = 100_000;
     private static String text = "abc";
 
@@ -70,6 +70,7 @@ public class Main {
         String textMaxChar = null;
         for (int i = 0; i < Quantity_Text; i++) {
             try {
+
                 textMaxChar = queue.take();
                 for (int j = 0; j < textMaxChar.length(); j++) {
                     if (textMaxChar.charAt(j) == x) {
