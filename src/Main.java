@@ -10,51 +10,41 @@ import java.util.stream.IntStream;
 
 public class Main {
     private static BlockingQueue<String> a_Queue = new ArrayBlockingQueue<>(100);
-    private static volatile int maxCountA = 0;
     private static BlockingQueue<String> b_Queue = new ArrayBlockingQueue<>(100);
-    private static volatile int maxCountB = 0;
     private static BlockingQueue<String> c_Queue = new ArrayBlockingQueue<>(100);
-    private static volatile int maxCountC = 0;
-
-
-    private static final AtomicInteger ATOMIC_A = new AtomicInteger(0);
-    private static final AtomicInteger ATOMIC_B = new AtomicInteger(0);
-    private static final AtomicInteger ATOMIC_C = new AtomicInteger(0);
 
     private static final int Quantity_Text = 10_000;
     private static final int lenght_Text = 100_000;
     private static String text = "abc";
 
-    private static String textMaxA;
-    private static String textMaxB;
-    private static String textMaxC;
+    public static Thread threadTextGenerator;
 
     public static void main(String[] args) throws InterruptedException {
-        Thread threadAQueue = new Thread(() -> {
+        threadTextGenerator = new Thread(() -> {
             for (int i = 0; i < Quantity_Text; i++) {
+                String texts = generateText(text, lenght_Text);
                 try {
-                    a_Queue.put(generateText(text, lenght_Text));
-                    b_Queue.put(generateText(text, lenght_Text));
-                    c_Queue.put(generateText(text, lenght_Text));
+                    a_Queue.put(texts);
+                    b_Queue.put(texts);
+                    c_Queue.put(texts);
                 } catch (InterruptedException e) {
                     return;
                 }
             }
         });
-        threadAQueue.start();
+        threadTextGenerator.start();
 
-        new Thread(() -> {
-            counterChar(a_Queue, 'a', ATOMIC_A, maxCountA);
-        }).start();
+        Thread aChar = getThread(a_Queue, 'a');
+        Thread bChar = getThread(b_Queue, 'b');
+        Thread cChar = getThread(c_Queue, 'c');
 
-        new Thread(() -> {
-            counterChar(b_Queue, 'b', ATOMIC_B, maxCountB);
-        }).start();
+        aChar.start();
+        bChar.start();
+        cChar.start();
 
-        new Thread(() -> {
-            counterChar(c_Queue, 'c', ATOMIC_C, maxCountC);
-        }).start();
-
+        aChar.join();
+        bChar.join();
+        cChar.join();
     }
 
     public static String generateText(String letters, int length) {
@@ -66,27 +56,31 @@ public class Main {
         return text.toString();
     }
 
-    public static void counterChar(BlockingQueue<String> queue, char x, AtomicInteger atomic, int maxVolatileCount) {
-        String textMaxChar = null;
-        for (int i = 0; i < Quantity_Text; i++) {
-            try {
+    public static Thread getThread(BlockingQueue<String> queue, char letter) {
+        return new Thread(() -> {
+            int maxChar = counterMaxChar(queue, letter);
+            System.out.println(letter + " - в тексте максимально встречается = " + maxChar);
+        });
+    }
 
-                textMaxChar = queue.take();
-                for (int j = 0; j < textMaxChar.length(); j++) {
-                    if (textMaxChar.charAt(j) == x) {
-                        atomic.incrementAndGet();
-                    }
+    public static int counterMaxChar(BlockingQueue<String> queue, char letter) {
+        int count = 0;
+        int maxChar = 0;
+        String text;
+        try {
+            while (threadTextGenerator.isAlive()) {
+                text = queue.take();
+                for (char c : text.toCharArray()) {
+                    if (c == letter) count++;
                 }
-            } catch (InterruptedException e) {
-                return;
+                if (count > maxChar) maxChar = count;
+                count = 0;
             }
-            if (maxVolatileCount < atomic.get()) {
-                maxVolatileCount = atomic.get();
-                textMaxC = textMaxChar;
-            }
-            atomic.set(0);
+        } catch (InterruptedException e) {
+            System.out.println(Thread.currentThread().getName() + " был прерван");
+            return -1;
         }
-        System.out.println(x + " - в тексте максимально встречается = " + maxVolatileCount);
+        return maxChar;
     }
 }
 
